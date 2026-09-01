@@ -1,0 +1,10 @@
+{
+  "description": "This online gift shop offers a curated selection of perfumes, designed for easy browsing and purchasing, enhancing the shopping experience for fragrance lovers.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

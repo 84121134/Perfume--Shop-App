@@ -278,6 +278,36 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Story Modal */}
+      {activeStory && (
+        <div
+          onClick={() => setActiveStory(null)}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.9)', zIndex: 101, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <img
+              src={STORIES.find(s => s.id === activeStory)?.img}
+              alt="Story"
+              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+            />
+            <button
+              onClick={() => setActiveStory(null)}
+              style={{ position: 'absolute', top: 20, right: 20, background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', fontSize: 28, cursor: 'pointer', width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.3)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
+            >
+              ✕
+            </button>
+            <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', color: '#fff', fontSize: 14, fontWeight: 600 }}>
+              {STORIES.find(s => s.id === activeStory)?.label}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -2,6 +2,9 @@
 // Substitua com seus valores reais
 
 export const INSTAGRAM_CONFIG = {
+  // URL da Página oficial no Facebook
+  FACEBOOK_PAGE_URL: 'https://www.facebook.com/profile.php?id=61560592764585',
+
   // ID da sua aplicação Facebook
   FACEBOOK_APP_ID: import.meta.env.VITE_FACEBOOK_APP_ID || 'SEU_FACEBOOK_APP_ID',
   

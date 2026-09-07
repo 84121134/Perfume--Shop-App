@@ -13,6 +13,20 @@ Esta aplicação está totalmente configurada para integração com Instagram e 
 
 ## 🚀 Como Configurar
 
+### Página do Facebook
+
+A loja já está vinculada ao botão da Página oficial:
+`https://www.facebook.com/profile.php?id=61560592764585`
+
+Para exibir a loja como uma **aba dentro da Página**, a aplicação precisa estar publicada em HTTPS e um app precisa ser criado no Meta for Developers com o produto **Page Tab**. Use estes valores na configuração:
+
+- **Page Tab Name:** Carol Presentes
+- **Secure Page Tab URL:** `https://carolpresentes.vercel.app/`
+- **Page Tab URL:** `https://carolpresentes.vercel.app/`
+- **Facebook Page:** a Página com ID `61560592764585`
+
+Depois, associe a aba à Página pelo painel do app. O App ID da Meta ainda precisa ser colocado nas variáveis de ambiente antes de ativar recursos autenticados do SDK.
+
 ### 1. Criar Aplicação no Facebook Developer
 
 1. Acesse [https://developers.facebook.com/](https://developers.facebook.com/)

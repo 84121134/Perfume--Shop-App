@@ -3,6 +3,7 @@ import InstagramShare from './components/InstagramShare'
 import FollowButton from './components/FollowButton'
 import InstagramFeed from './components/InstagramFeed'
 import { PRODUCTS, useInstagram } from './hooks/useInstagram'
+import { INSTAGRAM_CONFIG } from './config/instagram'
 
 const STORIES = [
   { id: 1, label: 'Novidades', img: 'https://manual-jade-lug9m8hi.edgeone.dev/file.png' },
@@ -13,12 +14,14 @@ const STORIES = [
 ]
 
 type Product = typeof PRODUCTS[0]
+type CartItem = Product & { quantity: number }
 
 export default function App() {
   const [tab, setTab] = useState<'loja' | 'feed'>('loja')
   const [liked, setLiked] = useState<Record<number, boolean>>({})
   const [activeStory, setActiveStory] = useState<number | null>(null)
-  const [cartCount, setCartCount] = useState(0)
+  const [cart, setCart] = useState<CartItem[]>([])
+  const [cartOpen, setCartOpen] = useState(false)
   const [selected, setSelected] = useState<Product | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -29,6 +32,33 @@ export default function App() {
   }, [initFacebookSDK])
 
   const toggleLike = (id: number) => setLiked(prev => ({ ...prev, [id]: !prev[id] }))
+
+  const priceValue = (price: string) => Number(price.replace('R$', '').replace(/\./g, '').replace(',', '.').trim())
+
+  const addToCart = (product: Product) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.id === product.id)
+      if (existing) return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item)
+      return [...prev, { ...product, quantity: 1 }]
+    })
+  }
+
+  const updateQuantity = (id: number, change: number) => {
+    setCart(prev => prev
+      .map(item => item.id === id ? { ...item, quantity: item.quantity + change } : item)
+      .filter(item => item.quantity > 0)
+    )
+  }
+
+  const cartCount = cart.reduce((total, item) => total + item.quantity, 0)
+  const cartTotal = cart.reduce((total, item) => total + priceValue(item.price) * item.quantity, 0)
+  const formattedTotal = cartTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+  const checkoutOnWhatsApp = () => {
+    const items = cart.map(item => `${item.quantity}x ${item.name} - ${item.brand}`).join('\n')
+    const message = encodeURIComponent(`Olá! Quero fazer este pedido na Carol Presentes:\n${items}\nTotal dos produtos: ${formattedTotal}\n\nPode me informar o frete e as formas de pagamento?`)
+    window.open(`https://wa.me/5519971455659?text=${message}`, '_blank')
+  }
 
   const filtered = PRODUCTS.filter(p =>
     searchQuery === '' ||
@@ -48,7 +78,7 @@ export default function App() {
         <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: '#2d2523', margin: 0 }}>
           Carol Presentes
         </h1>
-        <button onClick={() => setCartCount(c => c)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, position: 'relative' }}>
+        <button onClick={() => setCartOpen(true)} aria-label="Abrir carrinho" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, position: 'relative' }}>
           <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#2d2523" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0" />
           </svg>
@@ -113,9 +143,14 @@ export default function App() {
 
         <div style={{ display: 'flex', gap: 8, marginTop: 12, marginBottom: 12 }}>
           <FollowButton username="carolpresentesindaiatuba" variant="primary" />
-          <button style={{ flex: 1, backgroundColor: '#f7e8e0', color: '#2d2523', border: 'none', borderRadius: 8, padding: '7px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
-            Mensagem
-          </button>
+          <a
+            href={INSTAGRAM_CONFIG.FACEBOOK_PAGE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ flex: 1, backgroundColor: '#1877F2', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Nunito', sans-serif", textAlign: 'center', textDecoration: 'none' }}
+          >
+            Facebook
+          </a>
           <button style={{ width: 36, backgroundColor: '#f7e8e0', color: '#2d2523', border: 'none', borderRadius: 8, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2d2523" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -257,7 +292,7 @@ export default function App() {
                   {liked[selected.id] ? '❤️' : '🤍'}
                 </button>
                 <button
-                  onClick={() => { setCartCount(c => c + 1); setSelected(null) }}
+                  onClick={() => { addToCart(selected); setSelected(null); setCartOpen(true) }}
                   style={{ flex: 1, backgroundColor: '#c9956c', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 0', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
                 >
                   🛍️ Adicionar ao carrinho
@@ -267,15 +302,70 @@ export default function App() {
               <InstagramShare product={selected} />
 
               <button
+                onClick={() => { addToCart(selected); setSelected(null); setCartOpen(true) }}
                 style={{ width: '100%', marginTop: 10, backgroundColor: '#25D366', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 0', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z" />
                 </svg>
-                Comprar pelo WhatsApp
+                Adicionar e revisar pedido
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {cartOpen && (
+        <div
+          onClick={() => setCartOpen(false)}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', zIndex: 110, display: 'flex', justifyContent: 'flex-end' }}
+        >
+          <aside
+            onClick={e => e.stopPropagation()}
+            style={{ backgroundColor: '#fff', width: '100%', maxWidth: 420, height: '100%', padding: '20px 18px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <h2 style={{ fontFamily: "'Playfair Display', serif", color: '#2d2523', margin: 0 }}>Seu carrinho</h2>
+              <button onClick={() => setCartOpen(false)} aria-label="Fechar carrinho" style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#5c4d47' }}>×</button>
+            </div>
+
+            {cart.length === 0 ? (
+              <div style={{ textAlign: 'center', color: '#8c7b74', padding: '48px 10px' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🛍️</div>
+                <p style={{ fontWeight: 700, margin: 0 }}>Seu carrinho está vazio</p>
+                <p style={{ fontSize: 13 }}>Escolha um produto para começar.</p>
+              </div>
+            ) : (
+              <>
+                <div style={{ flex: 1 }}>
+                  {cart.map(item => (
+                    <div key={item.id} style={{ display: 'flex', gap: 10, padding: '12px 0', borderBottom: '1px solid #f0e6df' }}>
+                      <img src={item.img} alt={item.name} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, backgroundColor: '#f7e8e0' }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, color: '#2d2523', fontSize: 14 }}>{item.name}</div>
+                        <div style={{ color: '#8c7b74', fontSize: 12 }}>{item.brand}</div>
+                        <div style={{ color: '#c9956c', fontWeight: 700, fontSize: 14, marginTop: 4 }}>{item.price}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                          <button onClick={() => updateQuantity(item.id, -1)} aria-label={`Diminuir quantidade de ${item.name}`} style={{ width: 26, height: 26, border: '1px solid #f0e6df', background: '#fff', borderRadius: 6, cursor: 'pointer' }}>−</button>
+                          <span style={{ fontWeight: 700, minWidth: 16, textAlign: 'center' }}>{item.quantity}</span>
+                          <button onClick={() => updateQuantity(item.id, 1)} aria-label={`Aumentar quantidade de ${item.name}`} style={{ width: 26, height: 26, border: '1px solid #f0e6df', background: '#fff', borderRadius: 6, cursor: 'pointer' }}>+</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ borderTop: '1px solid #f0e6df', paddingTop: 16, marginTop: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2d2523', fontWeight: 800, fontSize: 18, marginBottom: 12 }}>
+                    <span>Total</span><span>{formattedTotal}</span>
+                  </div>
+                  <button onClick={checkoutOnWhatsApp} style={{ width: '100%', backgroundColor: '#25D366', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
+                    Finalizar pedido pelo WhatsApp
+                  </button>
+                  <p style={{ color: '#8c7b74', fontSize: 11, lineHeight: 1.4, textAlign: 'center', margin: '8px 0 0' }}>O frete e o pagamento serão combinados pelo WhatsApp.</p>
+                </div>
+              </>
+            )}
+          </aside>
         </div>
       )}
 

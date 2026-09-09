@@ -25,6 +25,8 @@ export default function App() {
   const [selected, setSelected] = useState<Product | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [checkoutError, setCheckoutError] = useState('')
   const { initFacebookSDK } = useInstagram()
 
   useEffect(() => {
@@ -58,6 +60,39 @@ export default function App() {
     const items = cart.map(item => `${item.quantity}x ${item.name} - ${item.brand}`).join('\n')
     const message = encodeURIComponent(`Olá! Quero fazer este pedido na Carol Presentes:\n${items}\nTotal dos produtos: ${formattedTotal}\n\nPode me informar o frete e as formas de pagamento?`)
     window.open(`https://wa.me/5519971455659?text=${message}`, '_blank')
+  }
+
+  const checkoutOnMercadoPago = async () => {
+    setCheckoutLoading(true)
+    setCheckoutError('')
+
+    try {
+      const response = await fetch('/api/mercadopago/preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: cart.map(item => ({ id: item.id, quantity: item.quantity })) }),
+      })
+      const responseText = await response.text()
+
+      let result: { initPoint?: string; error?: string } | null = null
+      if (responseText) {
+        try {
+          result = JSON.parse(responseText)
+        } catch {
+          throw new Error(`Resposta inválida do servidor (${response.status}). Verifique se o backend do Mercado Pago está rodando.`)
+        }
+      }
+
+      if (!response.ok || !result?.initPoint) {
+        throw new Error(result?.error || 'Não foi possível iniciar o pagamento.')
+      }
+
+      window.location.assign(result.initPoint)
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : 'Não foi possível iniciar o pagamento.')
+    } finally {
+      setCheckoutLoading(false)
+    }
   }
 
   const filtered = PRODUCTS.filter(p =>
@@ -358,10 +393,14 @@ export default function App() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2d2523', fontWeight: 800, fontSize: 18, marginBottom: 12 }}>
                     <span>Total</span><span>{formattedTotal}</span>
                   </div>
-                  <button onClick={checkoutOnWhatsApp} style={{ width: '100%', backgroundColor: '#25D366', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
-                    Finalizar pedido pelo WhatsApp
+                  <button onClick={checkoutOnMercadoPago} disabled={checkoutLoading} style={{ width: '100%', backgroundColor: '#009EE3', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 15, fontWeight: 700, cursor: checkoutLoading ? 'wait' : 'pointer', fontFamily: "'Nunito', sans-serif", opacity: checkoutLoading ? 0.7 : 1 }}>
+                    {checkoutLoading ? 'Abrindo pagamento...' : 'Pagar com Mercado Pago'}
                   </button>
-                  <p style={{ color: '#8c7b74', fontSize: 11, lineHeight: 1.4, textAlign: 'center', margin: '8px 0 0' }}>O frete e o pagamento serão combinados pelo WhatsApp.</p>
+                  {checkoutError && <p role="alert" style={{ color: '#a33a32', fontSize: 12, lineHeight: 1.4, textAlign: 'center', margin: '8px 0 0' }}>{checkoutError}</p>}
+                  <button onClick={checkoutOnWhatsApp} style={{ width: '100%', backgroundColor: '#25D366', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 0', marginTop: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
+                    Continuar pelo WhatsApp
+                  </button>
+                  <p style={{ color: '#8c7b74', fontSize: 11, lineHeight: 1.4, textAlign: 'center', margin: '8px 0 0' }}>O pagamento será processado com segurança pelo Mercado Pago.</p>
                 </div>
               </>
             )}

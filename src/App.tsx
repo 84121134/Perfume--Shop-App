@@ -67,7 +67,8 @@ export default function App() {
     setCheckoutError('')
 
     try {
-      const response = await fetch('/api/mercadopago/preference', {
+      const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+      const response = await fetch(`${apiBaseUrl}/api/mercadopago/preference`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: cart.map(item => ({ id: item.id, quantity: item.quantity })) }),
